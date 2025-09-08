@@ -1,17 +1,26 @@
 plugins {
     kotlin("jvm") version "1.9.25"
     kotlin("plugin.spring") version "1.9.25"
-    id("org.springframework.boot") version "3.5.5"
+    id("org.springframework.boot") version "3.5.5" apply false
     id("io.spring.dependency-management") version "1.1.7"
+    id("maven-publish")
+    id("java-library")
 }
 
 group = "no.fintlabs"
-version = "0.0.1-SNAPSHOT"
-description = "fint-core-autorelation-model"
+version = project.findProperty("version") ?: "0.0.1-SNAPSHOT"
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+dependencyManagement {
+    imports {
+        mavenBom(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
     }
 }
 
@@ -20,7 +29,7 @@ repositories {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter")
+    implementation("org.springframework.boot:spring-boot-starter:3.5.5")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
@@ -36,3 +45,5 @@ kotlin {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+apply(from = "https://raw.githubusercontent.com/FINTLabs/fint-buildscripts/master/reposilite.ga.gradle")
