@@ -7,5 +7,5 @@ data class RelationUpdate(
     val resource: ResourceRef,
     val relation: RelationRef,
     val operation: RelationOperation,
-    val entityRetentionTime: Long
+    val entityRetentionTime: Long?
 )

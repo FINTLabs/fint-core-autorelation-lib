@@ -5,7 +5,7 @@ data class RelationRequest(
     val orgId: String,
     val resource: Any,
     val operation: RelationOperation,
-    val entityRetentionTime: Long
+    val entityRetentionTime: Long?
 ) {
     companion object {
         fun from(
@@ -15,7 +15,7 @@ data class RelationRequest(
             pkg: String,
             resourceName: String,
             resource: Any,
-            entityRetentionTime: Long
+            entityRetentionTime: Long?
         ) =
             RelationRequest(
                 operation = operation,
