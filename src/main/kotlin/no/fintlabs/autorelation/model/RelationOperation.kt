@@ -1,4 +1,4 @@
-package no.fintlabs.autorelation.kafka.model
+package no.fintlabs.autorelation.model
 
 enum class RelationOperation {
     ADD,
