@@ -1,10 +1,11 @@
-package no.fintlabs.autorelation.kafka.model
+package no.fintlabs.autorelation.model
 
 data class RelationRequest(
     val type: ResourceType,
     val orgId: String,
     val resource: Any,
-    val operation: RelationOperation
+    val operation: RelationOperation,
+    val entityRetentionTime: Long
 ) {
     companion object {
         fun from(
@@ -13,7 +14,8 @@ data class RelationRequest(
             domain: String,
             pkg: String,
             resourceName: String,
-            resource: Any
+            resource: Any,
+            entityRetentionTime: Long
         ) =
             RelationRequest(
                 operation = operation,
@@ -23,7 +25,8 @@ data class RelationRequest(
                     resource = resourceName
                 ),
                 orgId = orgId,
-                resource = resource
+                resource = resource,
+                entityRetentionTime = entityRetentionTime
             )
     }
 }
