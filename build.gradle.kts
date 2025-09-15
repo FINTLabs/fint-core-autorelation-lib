@@ -30,6 +30,7 @@ repositories {
 }
 
 dependencies {
+    implementation("org.springframework.boot:spring-boot-starter:3.5.5")
     implementation("no.fintlabs:fint-model-core:0.5.0")
     implementation("no.fintlabs:fint-model-resource:0.5.0")
     implementation("no.fintlabs:fint-core-consumer-metamodel:2.0.0-rc-4")
@@ -41,7 +42,6 @@ dependencies {
     testImplementation("no.fint:fint-ressurs-resource-model-java:3.19.0")
     testImplementation("no.fint:fint-arkiv-resource-model-java:3.19.0")
 
-    implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
