@@ -1,1 +1,1 @@
-rootProject.name = "fint-core-autorelation-lib"
+rootProject.name = "fint-core-autorelation-model"
