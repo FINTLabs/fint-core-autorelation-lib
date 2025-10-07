@@ -9,8 +9,9 @@ class RelationCache(
     relationSpecBuilder: RelationSpecBuilder
 ) {
 
-    private val cache: Map<ResourceType, List<RelationSpec>> =
+    private val cache: Map<ResourceType, List<RelationSpec>> by lazy {
         relationSpecBuilder.buildResourceTypeToRelationSpecs()
+    }
 
     fun getResourceRelations(
         domainName: String,
