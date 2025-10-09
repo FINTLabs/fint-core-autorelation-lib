@@ -1,18 +1,16 @@
 package no.fintlabs.autorelation.model
 
-import no.fint.model.FintRelation
-
 class RelationSpec(
-    val resourceRelation: FintRelation,
-    val inversedRelation: FintRelation,
+    val resourceRelation: String,
+    val inversedRelation: String,
     val resourceType: ResourceType
 ) {
     companion object {
-        fun from(resourceRelation: FintRelation, inversedRelation: FintRelation, componentResource: String) =
+        fun from(resourceRelation: String, inversedRelation: String, componentResource: String) =
             RelationSpec(
                 resourceRelation,
                 inversedRelation,
-                ResourceType.Companion.parse(componentResource)
+                ResourceType.parse(componentResource)
             )
     }
 }
