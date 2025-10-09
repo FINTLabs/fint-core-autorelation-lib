@@ -61,8 +61,8 @@ class RelationSpecBuilder(
         resourceRelation: FintRelation,
         originalRelation: FintRelation
     ) = RelationSpec.from(
-        resourceRelation = resourceRelation,
-        inversedRelation = originalRelation,
+        resourceRelation = resourceRelation.name,
+        inversedRelation = originalRelation.name,
         componentResource = getComponentResource(resourceRelation.packageName)
     )
 
