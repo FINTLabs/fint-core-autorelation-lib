@@ -9,22 +9,31 @@ class RelationCache(
     relationSpecBuilder: RelationSpecBuilder
 ) {
 
-    private val cache: Map<ResourceType, List<RelationSpec>> by lazy {
+    private val triggerResourceRelations: Map<ResourceType, List<RelationSpec>> by lazy {
         relationSpecBuilder.buildResourceTypeToRelationSpecs()
     }
 
-    fun getResourceRelations(
-        domainName: String,
-        packageName: String
-    ): Map<String, Set<String>> =
-        cache.values
+    private val targetResourceRelations: Map<ResourceType, Set<String>> by lazy {
+        mapTargetRelations()
+    }
+
+    private fun mapTargetRelations(): Map<ResourceType, Set<String>> =
+        triggerResourceRelations.values
             .asSequence()
             .flatten()
-            .filter { it.resourceType.sameComponent(domainName, packageName) }
-            .groupBy { it.resourceType.resource }
-            .mapValues { (_, specs) -> specs.map { it.inversedRelation.name }.toSet() }
+            .groupBy { it.resourceType }
+            .mapValues { (_, specs) -> specs.map { it.inversedRelation }.toSet() }
 
+    fun isTriggerResourceType(resourceType: ResourceType): Boolean =
+        triggerResourceRelations.containsKey(resourceType)
 
-    fun getRelationSpecs(resourceType: ResourceType): List<RelationSpec>? = cache[resourceType]
+    fun getRelationSpecsForTrigger(resourceType: ResourceType): List<RelationSpec> =
+        triggerResourceRelations[resourceType] ?: emptyList()
+
+    fun getControlledRelationsForTarget(resourceType: ResourceType): Set<String> =
+        targetResourceRelations[resourceType] ?: emptySet()
+
+    fun getControlledRelationsForTarget(domain: String, pkg: String, resource: String): Set<String> =
+        getControlledRelationsForTarget(ResourceType.of(domain, pkg, resource))
 
 }
