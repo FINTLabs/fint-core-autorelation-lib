@@ -6,6 +6,5 @@ data class RelationUpdate(
     val packageName: String,
     val resource: ResourceRef,
     val relation: RelationRef,
-    val operation: RelationOperation,
-    val entityCreatedTime: Long?
+    val operation: RelationOperation
 )
