@@ -6,5 +6,5 @@ data class ResourceId(
     val field: String,
     val value: String
 ) {
-    fun createLink() = Link.with("$field/$value")
+    fun createLink(): Link = Link.with("$field/$value")
 }
