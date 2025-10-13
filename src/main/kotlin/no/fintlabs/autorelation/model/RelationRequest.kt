@@ -7,6 +7,7 @@ data class RelationRequest(
     val operation: RelationOperation
 ) {
     companion object {
+        @JvmStatic
         fun from(
             operation: RelationOperation,
             orgId: String,
