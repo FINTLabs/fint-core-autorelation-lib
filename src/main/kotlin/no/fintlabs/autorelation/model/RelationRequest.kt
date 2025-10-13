@@ -4,8 +4,7 @@ data class RelationRequest(
     val type: ResourceType,
     val orgId: String,
     val resource: Any,
-    val operation: RelationOperation,
-    val entityCreatedTime: Long?
+    val operation: RelationOperation
 ) {
     companion object {
         fun from(
@@ -14,8 +13,7 @@ data class RelationRequest(
             domain: String,
             pkg: String,
             resourceName: String,
-            resource: Any,
-            entityCreatedTime: Long?
+            resource: Any
         ) =
             RelationRequest(
                 operation = operation,
@@ -25,8 +23,7 @@ data class RelationRequest(
                     resource = resourceName
                 ),
                 orgId = orgId,
-                resource = resource,
-                entityCreatedTime = entityCreatedTime
+                resource = resource
             )
     }
 }
