@@ -1,39 +1,44 @@
 package no.fintlabs.autorelation.cache
 
-import no.fintlabs.autorelation.model.RelationSpec
+import no.fintlabs.autorelation.model.RelationSyncRule
 import no.fintlabs.autorelation.model.ResourceType
 import org.springframework.stereotype.Repository
 
+/**
+ * Cache for relation synchronization rules.
+ * Maps trigger resource types to the rules describing which target relations to update.
+ * Also provides reverse lookup of which inverse relations are controlled per target type.
+ */
 @Repository
 class RelationCache(
-    relationSpecBuilder: RelationSpecBuilder
+    relationRuleBuilder: RelationRuleBuilder
 ) {
 
-    private val triggerResourceRelations: Map<ResourceType, List<RelationSpec>> by lazy {
-        relationSpecBuilder.buildResourceTypeToRelationSpecs()
+    private val rulesByTriggerType: Map<ResourceType, List<RelationSyncRule>> by lazy {
+        relationRuleBuilder.buildRulesByTriggerType()
     }
 
-    private val targetResourceRelations: Map<ResourceType, Set<String>> by lazy {
-        mapTargetRelations()
+    private val inverseRelationsByTargetType: Map<ResourceType, Set<String>> by lazy {
+        indexInverseRelationsByTarget()
     }
 
-    private fun mapTargetRelations(): Map<ResourceType, Set<String>> =
-        triggerResourceRelations.values
+    private fun indexInverseRelationsByTarget(): Map<ResourceType, Set<String>> =
+        rulesByTriggerType.values
             .asSequence()
             .flatten()
-            .groupBy { it.resourceType }
-            .mapValues { (_, specs) -> specs.map { it.inversedRelation }.toSet() }
+            .groupBy { it.targetType }
+            .mapValues { (_, rules) -> rules.map { it.inverseRelation }.toSet() }
 
     fun isTriggerResourceType(resourceType: ResourceType): Boolean =
-        triggerResourceRelations.containsKey(resourceType)
+        rulesByTriggerType.containsKey(resourceType)
 
-    fun getRelationSpecsForTrigger(resourceType: ResourceType): List<RelationSpec> =
-        triggerResourceRelations[resourceType] ?: emptyList()
+    fun rulesForTrigger(resourceType: ResourceType): List<RelationSyncRule> =
+        rulesByTriggerType[resourceType] ?: emptyList()
 
-    fun getControlledRelationsForTarget(resourceType: ResourceType): Set<String> =
-        targetResourceRelations[resourceType] ?: emptySet()
+    fun inverseRelationsForTarget(resourceType: ResourceType): Set<String> =
+        inverseRelationsByTargetType[resourceType] ?: emptySet()
 
-    fun getControlledRelationsForTarget(domain: String, pkg: String, resource: String): Set<String> =
-        getControlledRelationsForTarget(ResourceType.of(domain, pkg, resource))
+    fun inverseRelationsForTarget(domain: String, pkg: String, resource: String): Set<String> =
+        inverseRelationsForTarget(ResourceType.of(domain, pkg, resource))
 
 }

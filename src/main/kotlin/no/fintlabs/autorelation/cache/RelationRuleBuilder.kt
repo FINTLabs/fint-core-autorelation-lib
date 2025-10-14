@@ -2,7 +2,7 @@ package no.fintlabs.autorelation.cache
 
 import no.fint.model.FintMultiplicity
 import no.fint.model.FintRelation
-import no.fintlabs.autorelation.model.RelationSpec
+import no.fintlabs.autorelation.model.RelationSyncRule
 import no.fintlabs.autorelation.model.ResourceType
 import no.fintlabs.metamodel.MetamodelService
 import no.fintlabs.metamodel.model.Component
@@ -12,13 +12,13 @@ import org.springframework.stereotype.Service
 
 @Service
 @ComponentScan("no.fintlabs")
-class RelationSpecBuilder(
+class RelationRuleBuilder(
     private val metamodelService: MetamodelService
 ) {
 
     // TODO: Move some of the Fint logic into metamodel?
 
-    fun buildResourceTypeToRelationSpecs(): Map<ResourceType, List<RelationSpec>> =
+    fun buildRulesByTriggerType(): Map<ResourceType, List<RelationSyncRule>> =
         metamodelService.getComponents()
             .flatMap { component ->
                 component.resources.flatMap { resource ->
@@ -26,7 +26,7 @@ class RelationSpecBuilder(
                         .filter { isOneOrNoneToMany(it.multiplicity) }
                         .filter { belongsToSameDomain(component, it) }
                         .mapNotNull { relation ->
-                            buildResourceTypeToRelationSpecs(
+                            buildRulesByTriggerType(
                                 component = component.name,
                                 originalRelation = relation,
                                 resourcePackage = resource.packageName
@@ -42,11 +42,11 @@ class RelationSpecBuilder(
     private fun belongsToSameDomain(component: Component, relation: FintRelation): Boolean =
         relation.packageName.startsWith("no.fint.model.${component.domainName}")
 
-    private fun buildResourceTypeToRelationSpecs(
+    private fun buildRulesByTriggerType(
         component: String,
         originalRelation: FintRelation,
         resourcePackage: String
-    ): Pair<ResourceType, RelationSpec>? =
+    ): Pair<ResourceType, RelationSyncRule>? =
         formatComponentResource(component, originalRelation.packageName)
             .let { componentResource -> ResourceType.parse(componentResource) }
             .let { resourceType ->
@@ -60,9 +60,9 @@ class RelationSpecBuilder(
     private fun createResourceSpec(
         resourceRelation: FintRelation,
         originalRelation: FintRelation
-    ) = RelationSpec.from(
-        resourceRelation = resourceRelation.name,
-        inversedRelation = originalRelation.name,
+    ) = RelationSyncRule.from(
+        forwardRelation = resourceRelation.name,
+        inverseRelation = originalRelation.name,
         componentResource = getComponentResource(resourceRelation.packageName)
     )
 
