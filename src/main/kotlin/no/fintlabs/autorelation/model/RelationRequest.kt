@@ -7,6 +7,15 @@ data class RelationRequest(
     val operation: RelationOperation
 ) {
     companion object {
+
+        fun from(topic: String, resource: Any, operation: RelationOperation) =
+            RelationRequest(
+                type = getResourceType(topic),
+                orgId = getOrgId(topic),
+                resource = resource,
+                operation = operation
+            )
+
         @JvmStatic
         fun from(
             operation: RelationOperation,
@@ -15,16 +24,20 @@ data class RelationRequest(
             pkg: String,
             resourceName: String,
             resource: Any
-        ) =
-            RelationRequest(
-                operation = operation,
-                type = ResourceType(
-                    domain = domain,
-                    pkg = pkg,
-                    resource = resourceName
-                ),
-                orgId = orgId,
-                resource = resource
-            )
+        ) = RelationRequest(
+            operation = operation,
+            type = ResourceType(
+                domain = domain,
+                pkg = pkg,
+                resource = resourceName
+            ),
+            orgId = orgId,
+            resource = resource
+        )
+
+        private fun getOrgId(topic: String) = topic.substringBefore(".")
+
+        private fun getResourceType(topic: String) =
+            ResourceType.parse(topic.substringAfterLast("."))
     }
 }
