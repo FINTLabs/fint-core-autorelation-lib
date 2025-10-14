@@ -8,12 +8,12 @@ data class RelationRequest(
 ) {
     companion object {
 
-        fun from(topic: String, resource: Any, operation: RelationOperation) =
+        fun fromEntity(topic: String, resource: Any) =
             RelationRequest(
                 type = getResourceType(topic),
                 orgId = getOrgId(topic),
                 resource = resource,
-                operation = operation
+                operation = RelationOperation.ADD
             )
 
         @JvmStatic
