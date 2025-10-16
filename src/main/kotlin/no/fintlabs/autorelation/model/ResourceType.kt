@@ -6,10 +6,6 @@ data class ResourceType(
     val resource: String
 ) {
 
-    fun sameComponent(domain: String, pkg: String) =
-        this.domain.equals(domain, ignoreCase = true)
-                && this.pkg.equals(pkg, ignoreCase = true)
-
     companion object {
         fun of(domain: String, pkg: String, resource: String): ResourceType =
             ResourceType(
