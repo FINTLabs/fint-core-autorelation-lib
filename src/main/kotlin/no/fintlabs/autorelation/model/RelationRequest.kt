@@ -18,14 +18,13 @@ data class RelationRequest(
 
         @JvmStatic
         fun from(
-            operation: RelationOperation,
             orgId: String,
             domain: String,
             pkg: String,
             resourceName: String,
             resource: Any
         ) = RelationRequest(
-            operation = operation,
+            operation = RelationOperation.DELETE,
             type = ResourceType(
                 domain = domain,
                 pkg = pkg,
