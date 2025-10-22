@@ -6,37 +6,35 @@ data class RelationRequest(
     val resource: Any,
     val operation: RelationOperation
 ) {
+    constructor(topic: String, resource: Any, operation: RelationOperation) : this(
+        type = getResourceType(topic),
+        orgId = getOrgId(topic),
+        resource = resource,
+        operation = operation,
+    )
+
     companion object {
-
-        fun fromEntity(topic: String, resource: Any) =
-            RelationRequest(
-                type = getResourceType(topic),
-                orgId = getOrgId(topic),
-                resource = resource,
-                operation = RelationOperation.ADD
-            )
-
-        @JvmStatic
-        fun from(
-            orgId: String,
-            domain: String,
-            pkg: String,
-            resourceName: String,
-            resource: Any
-        ) = RelationRequest(
-            operation = RelationOperation.DELETE,
-            type = ResourceType(
-                domain = domain,
-                pkg = pkg,
-                resource = resourceName
-            ),
-            orgId = orgId,
-            resource = resource
-        )
-
         private fun getOrgId(topic: String) = topic.substringBefore(".")
 
         private fun getResourceType(topic: String) =
             ResourceType.parse(topic.substringAfterLast("."))
     }
+
 }
+
+fun createDeleteRequest(
+    orgId: String,
+    domain: String,
+    pkg: String,
+    resourceName: String,
+    resource: Any
+) = RelationRequest(
+    operation = RelationOperation.DELETE,
+    type = ResourceType(
+        domain = domain,
+        pkg = pkg,
+        resource = resourceName
+    ),
+    orgId = orgId,
+    resource = resource
+)
