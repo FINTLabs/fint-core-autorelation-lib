@@ -29,18 +29,19 @@ repositories {
     mavenCentral()
 }
 
+val fintVersion = "3.21.11-rc-4"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter:3.5.5")
     implementation("no.fintlabs:fint-model-core:0.5.0")
     implementation("no.fintlabs:fint-model-resource:0.5.0")
     implementation("no.fintlabs:fint-core-consumer-metamodel:2.0.0-rc-4")
 
-    testImplementation("no.fint:fint-utdanning-resource-model-java:3.19.0")
-    testImplementation("no.fint:fint-administrasjon-resource-model-java:3.19.0")
-    testImplementation("no.fint:fint-personvern-resource-model-java:3.19.0")
-    testImplementation("no.fint:fint-okonomi-resource-model-java:3.19.0")
-    testImplementation("no.fint:fint-ressurs-resource-model-java:3.19.0")
-    testImplementation("no.fint:fint-arkiv-resource-model-java:3.19.0")
+    testImplementation("no.fint:fint-utdanning-resource-model-java:$fintVersion")
+    testImplementation("no.fint:fint-administrasjon-resource-model-java:$fintVersion")
+    testImplementation("no.fint:fint-personvern-resource-model-java:$fintVersion")
+    testImplementation("no.fint:fint-okonomi-resource-model-java:$fintVersion")
+    testImplementation("no.fint:fint-ressurs-resource-model-java:$fintVersion")
+    testImplementation("no.fint:fint-arkiv-resource-model-java:$fintVersion")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
