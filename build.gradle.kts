@@ -7,7 +7,7 @@ plugins {
     id("java-library")
 }
 
-group = "no.fintlabs"
+group = "no.novari"
 version = project.findProperty("version") ?: "0.0.1-SNAPSHOT"
 
 java {
@@ -59,4 +59,19 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-apply(from = "https://raw.githubusercontent.com/FINTLabs/fint-buildscripts/master/reposilite.ga.gradle")
+publishing {
+    repositories {
+        maven {
+            url = uri("https://repo.fintlabs.no/releases")
+            credentials {
+                username = System.getenv("REPOSILITE_USERNAME")
+                password = System.getenv("REPOSILITE_PASSWORD")
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
+}
