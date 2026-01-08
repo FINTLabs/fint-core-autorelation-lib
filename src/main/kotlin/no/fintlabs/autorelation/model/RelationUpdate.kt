@@ -1,6 +1,6 @@
 package no.fintlabs.autorelation.model
 
-import no.fint.model.resource.FintResource
+import no.novari.fint.model.resource.FintResource
 
 data class RelationUpdate(
     val orgId: String,

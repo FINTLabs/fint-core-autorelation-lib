@@ -1,7 +1,7 @@
 package no.fintlabs.autorelation.cache
 
-import no.fint.model.FintMultiplicity
-import no.fint.model.FintRelation
+import no.novari.fint.model.FintMultiplicity
+import no.novari.fint.model.FintRelation
 import no.fintlabs.autorelation.model.RelationSyncRule
 import no.fintlabs.autorelation.model.ResourceType
 import no.fintlabs.metamodel.MetamodelService
@@ -40,7 +40,7 @@ class RelationRuleBuilder(
             )
 
     private fun belongsToSameDomain(component: Component, relation: FintRelation): Boolean =
-        relation.packageName.startsWith("no.fint.model.${component.domainName}")
+        relation.packageName.startsWith("no.novari.fint.model.${component.domainName}")
 
     private fun buildRulesByTriggerType(
         component: String,
@@ -87,6 +87,6 @@ class RelationRuleBuilder(
             .joinToString("-")
 
     private fun isCommon(packageName: String) =
-        packageName.startsWith("no.fint.model.felles")
+        packageName.startsWith("no.novari.fint.model.felles")
 
 }

@@ -1,7 +1,7 @@
 package no.fintlabs.autorelation.model
 
-import no.fint.model.resource.FintResource
-import no.fint.model.resource.Link
+import no.novari.fint.model.resource.FintResource
+import no.novari.fint.model.resource.Link
 
 data class ResourceRef(
     val name: String,
