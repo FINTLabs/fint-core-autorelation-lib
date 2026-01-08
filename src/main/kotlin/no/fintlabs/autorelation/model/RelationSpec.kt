@@ -1,6 +1,6 @@
 package no.fintlabs.autorelation.model
 
-import no.fint.model.FintRelation
+import no.novari.fint.model.FintRelation
 
 class RelationSpec(
     val resourceRelation: FintRelation,

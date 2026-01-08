@@ -1,12 +1,12 @@
 package no.fintlabs.autorelation.cache
 
-import no.fint.model.FintMultiplicity
-import no.fint.model.FintRelation
 import no.fintlabs.autorelation.model.RelationSpec
 import no.fintlabs.autorelation.model.ResourceType
 import no.fintlabs.metamodel.MetamodelService
 import no.fintlabs.metamodel.model.Component
 import no.fintlabs.metamodel.model.Resource
+import no.novari.fint.model.FintMultiplicity
+import no.novari.fint.model.FintRelation
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.stereotype.Service
 
@@ -40,7 +40,7 @@ class RelationSpecBuilder(
             )
 
     private fun belongsToSameDomain(component: Component, relation: FintRelation): Boolean =
-        relation.packageName.startsWith("no.fint.model.${component.domainName}")
+        relation.packageName.startsWith("no.novari.model.${component.domainName}")
 
     private fun buildResourceTypeToRelationSpecs(
         component: String,
@@ -87,6 +87,6 @@ class RelationSpecBuilder(
             .joinToString("-")
 
     private fun isCommon(packageName: String) =
-        packageName.startsWith("no.fint.model.felles")
+        packageName.startsWith("no.novari.model.felles")
 
 }
