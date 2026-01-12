@@ -15,7 +15,7 @@ class RelationCache(
 ) {
 
     private val rulesByTriggerType: Map<ResourceType, List<RelationSyncRule>> by lazy {
-        relationRuleBuilder.buildRulesByTriggerType()
+        relationRuleBuilder.buildResourceTypeToRelationSyncRules()
     }
 
     private val inverseRelationsByTargetType: Map<ResourceType, Set<String>> by lazy {
