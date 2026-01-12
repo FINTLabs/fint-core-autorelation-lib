@@ -16,8 +16,8 @@ data class RelationUpdate(
                 RelationRef.from(resource, relationSyncRule)?.let { relationRef ->
                     RelationUpdate(
                         orgId = request.orgId,
-                        domainName = relationSyncRule.targetType.domain,
-                        packageName = relationSyncRule.targetType.pkg,
+                        domainName = relationSyncRule.targetType.domainName,
+                        packageName = relationSyncRule.targetType.packageName,
                         resource = resourceRef,
                         relation = relationRef,
                         operation = request.operation

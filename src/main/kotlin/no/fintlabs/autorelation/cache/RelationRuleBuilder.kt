@@ -69,7 +69,7 @@ class RelationRuleBuilder(
             ?: error("Could not find inverse relation of package $inverseRelationPackageName")
 
     private fun ResourceType.toMetamodelResource(): Resource? =
-        metamodelService.getResource(domain, pkg, resource)
+        metamodelService.getResource(domainName, packageName, resource)
 
     private fun belongsToSameDomain(component: Component, relation: FintRelation): Boolean =
         relation.packageName.startsWith("no.fint.model.${component.domainName}")

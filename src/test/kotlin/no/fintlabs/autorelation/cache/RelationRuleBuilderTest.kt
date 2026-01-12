@@ -50,8 +50,8 @@ class RelationRuleBuilderTest {
         // Ensure builder can find the target resource
         every {
             metamodelService.getResource(
-                scenario.expectedTargetType.domain,
-                scenario.expectedTargetType.pkg,
+                scenario.expectedTargetType.domainName,
+                scenario.expectedTargetType.packageName,
                 scenario.expectedTargetType.resource
             )
         } returns targetResource

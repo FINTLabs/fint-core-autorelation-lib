@@ -1,20 +1,21 @@
 package no.fintlabs.autorelation.model
 
 data class ResourceType(
-    val domain: String,
-    val pkg: String,
+    val domainName: String,
+    val packageName: String,
     val resource: String
 ) {
 
     companion object {
-        fun of(domain: String, pkg: String, resource: String): ResourceType =
+        fun of(domainName: String, packageName: String, resource: String): ResourceType =
             ResourceType(
-                domain.lowercase(),
-                pkg.lowercase(),
+                domainName.lowercase(),
+                packageName.lowercase(),
                 resource.lowercase()
             )
 
         fun parse(key: String): ResourceType =
-            key.split("-", limit = 3).let { (domain, pkg, resource) -> of(domain, pkg, resource) }
+            key.split("-", limit = 3)
+                .let { (domainName, packageName, resource) -> of(domainName, packageName, resource) }
     }
 }
