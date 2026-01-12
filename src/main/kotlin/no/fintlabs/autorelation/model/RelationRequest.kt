@@ -31,8 +31,8 @@ fun createDeleteRequest(
 ) = RelationRequest(
     operation = RelationOperation.DELETE,
     type = ResourceType(
-        domain = domain,
-        pkg = pkg,
+        domainName = domain,
+        packageName = pkg,
         resource = resourceName
     ),
     orgId = orgId,

@@ -43,6 +43,7 @@ dependencies {
     testImplementation("no.fint:fint-ressurs-resource-model-java:$fintVersion")
     testImplementation("no.fint:fint-arkiv-resource-model-java:$fintVersion")
 
+    testImplementation("io.mockk:mockk:1.13.12")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
