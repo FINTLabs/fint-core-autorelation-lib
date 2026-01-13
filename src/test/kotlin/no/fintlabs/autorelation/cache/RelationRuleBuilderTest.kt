@@ -2,9 +2,9 @@ package no.fintlabs.autorelation.cache
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import no.fint.model.FintMultiplicity
 import no.fint.model.FintRelation
-import no.fint.model.resource.FintResource
 import no.fintlabs.autorelation.model.ResourceType
 import no.fintlabs.metamodel.MetamodelService
 import no.fintlabs.metamodel.model.Component
@@ -26,37 +26,24 @@ class RelationRuleBuilderTest {
     @MethodSource("successScenarios")
     fun `should build correct rules for valid combinations`(scenario: TestScenario) {
         // GIVEN
-        val componentName = "${scenario.domain}-${scenario.pkg}"
-
-        // 1. Define Target Resource (The one being pointed TO)
-        val targetResource =
-            resource(
-                name = scenario.targetName,
-                pkg = scenario.targetPackage,
-                relations = arrayOf(relation(scenario.sourceName, scenario.sourcePackage, scenario.inverseMultiplicity)),
-            )
-
-        // 2. Define Source Resource (The one starting the relation)
         val sourceResource =
             resource(
                 name = scenario.sourceName,
-                pkg = scenario.sourcePackage,
-                relations = arrayOf(relation(scenario.targetName, scenario.targetPackage, scenario.sourceMultiplicity)),
+                relations =
+                    arrayOf(
+                        relation(
+                            name = scenario.forwardRelationName,
+                            pkg = scenario.targetPackage,
+                            multiplicity = scenario.sourceMultiplicity,
+                            inverseName = scenario.inverseRelationName,
+                        ),
+                    ),
             )
 
-        // 3. Mock Service
         every { metamodelService.getComponents() } returns
             listOf(
-                Component(componentName, "xml", listOf(sourceResource)),
+                mockComponent(scenario.domain, scenario.pkg, listOf(sourceResource)),
             )
-        // Ensure builder can find the target resource
-        every {
-            metamodelService.getResource(
-                scenario.expectedTargetType.domainName,
-                scenario.expectedTargetType.packageName,
-                scenario.expectedTargetType.resource,
-            )
-        } returns targetResource
 
         // WHEN
         val result = ruleBuilder.buildResourceTypeToRelationSyncRules()
@@ -66,24 +53,58 @@ class RelationRuleBuilderTest {
         val rule = result[expectedKey]?.single() ?: fail("Expected one rule for $expectedKey")
 
         with(rule) {
-            assertEquals(scenario.targetName, forwardRelation)
-            assertEquals(scenario.sourceName, inverseRelation)
+            assertEquals(scenario.forwardRelationName, targetRelation)
+            assertEquals(scenario.inverseRelationName, inverseRelation)
             assertEquals(scenario.expectedTargetType, targetType)
         }
     }
 
     @Test
-    fun `should ignore relation if source multiplicity is 1-1`() {
-        // 1-1 relations are not synced by this rule builder
+    fun `should ignore relation if inverseName is null (Uni-directional)`() {
         val sourceResource =
             resource(
-                "elev",
-                "no.fint.model.utdanning.source.elev",
-                relation("person", "no.fint.model.utdanning.target.person", FintMultiplicity.ONE_TO_ONE),
+                name = "elev",
+                relations =
+                    arrayOf(
+                        relation(
+                            name = "relatedPerson",
+                            pkg = "no.fint.model.utdanning.target.person",
+                            multiplicity = FintMultiplicity.ONE_TO_MANY,
+                            inverseName = null,
+                        ),
+                    ),
             )
+
         every { metamodelService.getComponents() } returns
             listOf(
-                Component("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
+            )
+
+        assertTrue(
+            ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty(),
+            "Should ignore uni-directional relations",
+        )
+    }
+
+    @Test
+    fun `should ignore relation if source multiplicity is 1-1`() {
+        val sourceResource =
+            resource(
+                name = "elev",
+                relations =
+                    arrayOf(
+                        relation(
+                            "relatedPerson",
+                            "no.fint.model.utdanning.target.person",
+                            FintMultiplicity.ONE_TO_ONE,
+                            "studentList",
+                        ),
+                    ),
+            )
+
+        every { metamodelService.getComponents() } returns
+            listOf(
+                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
             )
 
         assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
@@ -93,110 +114,91 @@ class RelationRuleBuilderTest {
     fun `should ignore relation if different domain`() {
         val sourceResource =
             resource(
-                "elev",
-                "no.fint.model.utdanning.source.elev",
-                relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY),
+                name = "elev",
+                relations =
+                    arrayOf(
+                        relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY, "elev"),
+                    ),
             )
+
         every { metamodelService.getComponents() } returns
             listOf(
-                Component("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
             )
 
         assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
     }
+
+    // --- Data Providers ---
 
     private fun successScenarios(): List<TestScenario> {
         val standardPkg = "no.fint.model.utdanning.target.person"
         val commonPkg = "no.fint.model.utdanning.person"
 
         val standardType = ResourceType("utdanning", "target", "person")
-        val commonType = ResourceType("utdanning", "source", "person") // Inherits 'source'
+        val commonType = ResourceType("utdanning", "source", "person")
 
         return listOf(
-            TestScenario(
-                "Standard: 1-N to 1-1",
-                FintMultiplicity.ONE_TO_MANY,
-                FintMultiplicity.ONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Standard: 1-N to 0-1",
-                FintMultiplicity.ONE_TO_MANY,
-                FintMultiplicity.NONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Standard: 0-N to 1-1",
-                FintMultiplicity.NONE_TO_MANY,
-                FintMultiplicity.ONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Standard: 0-N to 0-1",
-                FintMultiplicity.NONE_TO_MANY,
-                FintMultiplicity.NONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Common Resource: Inherits Component Package",
-                FintMultiplicity.ONE_TO_MANY,
-                FintMultiplicity.NONE_TO_ONE,
-                commonPkg,
-                commonType,
-            ),
+            TestScenario("Standard: 1-N", FintMultiplicity.ONE_TO_MANY, standardPkg, standardType),
+            TestScenario("Standard: 0-N", FintMultiplicity.NONE_TO_MANY, standardPkg, standardType),
+            TestScenario("Common Resource", FintMultiplicity.ONE_TO_MANY, commonPkg, commonType),
         )
     }
 
     data class TestScenario(
         val testName: String,
         val sourceMultiplicity: FintMultiplicity,
-        val inverseMultiplicity: FintMultiplicity,
         val targetPackage: String,
         val expectedTargetType: ResourceType,
         val domain: String = "utdanning",
         val pkg: String = "source",
         val sourceName: String = "elev",
         val targetName: String = "person",
+        val forwardRelationName: String = "contactPerson",
+        val inverseRelationName: String = "studentList",
     ) {
         val sourcePackage get() = "no.fint.model.$domain.$pkg.$sourceName"
 
         override fun toString() = testName
     }
 
+    private fun mockComponent(
+        domain: String,
+        pkg: String,
+        resourcesList: List<Resource>,
+    ): Component =
+        spyk(Component(domain, pkg)) {
+            every { this@spyk.resources } returns resourcesList
+        }
+
     private fun resource(
         name: String,
-        pkg: String,
         vararg relations: FintRelation,
-    ) = Resource(
-        name = name,
-        packageName = pkg,
-        resourceType = FintResource::class.java,
-        isCommon = false,
-        writeable = true,
-        fields = emptySet(),
-        idFields = emptySet(),
-        relations = relations.toList(),
-    )
+    ): Resource =
+        mockk<Resource> {
+            every { this@mockk.name } returns name.lowercase()
+            every { this@mockk.relations } returns relations.toList()
+        }
 
     private fun relation(
         name: String,
         pkg: String,
         multiplicity: FintMultiplicity,
-    ) = TestRelation(packageName = pkg, multiplicity = multiplicity, name = name)
+        inverseName: String? = null,
+    ) = TestRelation(packageName = pkg, multiplicity = multiplicity, name = name, inverseName = inverseName)
 
     data class TestRelation(
         private val packageName: String,
         private val multiplicity: FintMultiplicity,
         private val name: String,
+        private val inverseName: String?,
     ) : FintRelation {
         override fun getPackageName() = packageName
 
         override fun getMultiplicity() = multiplicity
 
         override fun getName() = name
+
+        override fun getInverseName() = inverseName
     }
 }
