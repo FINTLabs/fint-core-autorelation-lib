@@ -28,35 +28,28 @@ class RelationRuleBuilderTest {
         // GIVEN
         val componentName = "${scenario.domain}-${scenario.pkg}"
 
-        // 1. Define Target Resource (The one being pointed TO)
-        val targetResource =
-            resource(
-                name = scenario.targetName,
-                pkg = scenario.targetPackage,
-                relations = arrayOf(relation(scenario.sourceName, scenario.sourcePackage, scenario.inverseMultiplicity)),
-            )
-
-        // 2. Define Source Resource (The one starting the relation)
         val sourceResource =
             resource(
                 name = scenario.sourceName,
                 pkg = scenario.sourcePackage,
-                relations = arrayOf(relation(scenario.targetName, scenario.targetPackage, scenario.sourceMultiplicity)),
+                relations =
+                    arrayOf(
+                        relation(
+                            // DISTINCT NAME CHECK:
+                            // We use a specific relation name (e.g. "contactTeacher")
+                            // to prove we aren't just copying the resource name ("person").
+                            name = scenario.forwardRelationName,
+                            pkg = scenario.targetPackage,
+                            multiplicity = scenario.sourceMultiplicity,
+                            inverseName = scenario.inverseRelationName,
+                        ),
+                    ),
             )
 
-        // 3. Mock Service
         every { metamodelService.getComponents() } returns
             listOf(
                 Component(componentName, "xml", listOf(sourceResource)),
             )
-        // Ensure builder can find the target resource
-        every {
-            metamodelService.getResource(
-                scenario.expectedTargetType.domainName,
-                scenario.expectedTargetType.packageName,
-                scenario.expectedTargetType.resource,
-            )
-        } returns targetResource
 
         // WHEN
         val result = ruleBuilder.buildResourceTypeToRelationSyncRules()
@@ -66,20 +59,51 @@ class RelationRuleBuilderTest {
         val rule = result[expectedKey]?.single() ?: fail("Expected one rule for $expectedKey")
 
         with(rule) {
-            assertEquals(scenario.targetName, forwardRelation)
-            assertEquals(scenario.sourceName, inverseRelation)
+            // Verify we mapped the RELATION names, not the resource names
+            assertEquals(scenario.forwardRelationName, forwardRelation)
+            assertEquals(scenario.inverseRelationName, inverseRelation)
+
+            // Verify the target TYPE is still correct based on the package
             assertEquals(scenario.expectedTargetType, targetType)
         }
     }
 
     @Test
-    fun `should ignore relation if source multiplicity is 1-1`() {
-        // 1-1 relations are not synced by this rule builder
+    fun `should ignore relation if inverseName is null (Uni-directional)`() {
         val sourceResource =
             resource(
                 "elev",
                 "no.fint.model.utdanning.source.elev",
-                relation("person", "no.fint.model.utdanning.target.person", FintMultiplicity.ONE_TO_ONE),
+                relation(
+                    name = "relatedPerson",
+                    pkg = "no.fint.model.utdanning.target.person",
+                    multiplicity = FintMultiplicity.ONE_TO_MANY,
+                    inverseName = null,
+                ),
+            )
+        every { metamodelService.getComponents() } returns
+            listOf(
+                Component("utdanning-source", "xml", listOf(sourceResource)),
+            )
+
+        assertTrue(
+            ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty(),
+            "Should ignore uni-directional relations",
+        )
+    }
+
+    @Test
+    fun `should ignore relation if source multiplicity is 1-1`() {
+        val sourceResource =
+            resource(
+                "elev",
+                "no.fint.model.utdanning.source.elev",
+                relation(
+                    "relatedPerson",
+                    "no.fint.model.utdanning.target.person",
+                    FintMultiplicity.ONE_TO_ONE,
+                    "studentList",
+                ),
             )
         every { metamodelService.getComponents() } returns
             listOf(
@@ -95,7 +119,7 @@ class RelationRuleBuilderTest {
             resource(
                 "elev",
                 "no.fint.model.utdanning.source.elev",
-                relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY),
+                relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY, "elev"),
             )
         every { metamodelService.getComponents() } returns
             listOf(
@@ -105,62 +129,34 @@ class RelationRuleBuilderTest {
         assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
     }
 
+    // --- Data Providers ---
+
     private fun successScenarios(): List<TestScenario> {
         val standardPkg = "no.fint.model.utdanning.target.person"
         val commonPkg = "no.fint.model.utdanning.person"
 
         val standardType = ResourceType("utdanning", "target", "person")
-        val commonType = ResourceType("utdanning", "source", "person") // Inherits 'source'
+        val commonType = ResourceType("utdanning", "source", "person")
 
         return listOf(
-            TestScenario(
-                "Standard: 1-N to 1-1",
-                FintMultiplicity.ONE_TO_MANY,
-                FintMultiplicity.ONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Standard: 1-N to 0-1",
-                FintMultiplicity.ONE_TO_MANY,
-                FintMultiplicity.NONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Standard: 0-N to 1-1",
-                FintMultiplicity.NONE_TO_MANY,
-                FintMultiplicity.ONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Standard: 0-N to 0-1",
-                FintMultiplicity.NONE_TO_MANY,
-                FintMultiplicity.NONE_TO_ONE,
-                standardPkg,
-                standardType,
-            ),
-            TestScenario(
-                "Common Resource: Inherits Component Package",
-                FintMultiplicity.ONE_TO_MANY,
-                FintMultiplicity.NONE_TO_ONE,
-                commonPkg,
-                commonType,
-            ),
+            TestScenario("Standard: 1-N", FintMultiplicity.ONE_TO_MANY, standardPkg, standardType),
+            TestScenario("Standard: 0-N", FintMultiplicity.NONE_TO_MANY, standardPkg, standardType),
+            TestScenario("Common Resource", FintMultiplicity.ONE_TO_MANY, commonPkg, commonType),
         )
     }
 
     data class TestScenario(
         val testName: String,
         val sourceMultiplicity: FintMultiplicity,
-        val inverseMultiplicity: FintMultiplicity,
         val targetPackage: String,
         val expectedTargetType: ResourceType,
         val domain: String = "utdanning",
         val pkg: String = "source",
         val sourceName: String = "elev",
         val targetName: String = "person",
+        // Distinct relation names to ensure we aren't confusing them with resource names
+        val forwardRelationName: String = "contactPerson",
+        val inverseRelationName: String = "studentList",
     ) {
         val sourcePackage get() = "no.fint.model.$domain.$pkg.$sourceName"
 
@@ -186,17 +182,21 @@ class RelationRuleBuilderTest {
         name: String,
         pkg: String,
         multiplicity: FintMultiplicity,
-    ) = TestRelation(packageName = pkg, multiplicity = multiplicity, name = name)
+        inverseName: String? = null,
+    ) = TestRelation(packageName = pkg, multiplicity = multiplicity, name = name, inverseName = inverseName)
 
     data class TestRelation(
         private val packageName: String,
         private val multiplicity: FintMultiplicity,
         private val name: String,
+        private val inverseName: String?,
     ) : FintRelation {
         override fun getPackageName() = packageName
 
         override fun getMultiplicity() = multiplicity
 
         override fun getName() = name
+
+        override fun getInverseName() = inverseName
     }
 }

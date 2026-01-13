@@ -7,19 +7,17 @@ import no.fintlabs.autorelation.model.ResourceType
 import no.fintlabs.metamodel.MetamodelService
 import no.fintlabs.metamodel.model.Component
 import no.fintlabs.metamodel.model.Resource
-import org.springframework.context.annotation.ComponentScan
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component as SpringComponent
 
-@Service
-@ComponentScan("no.fintlabs")
+@SpringComponent
 class RelationRuleBuilder(
     private val metamodelService: MetamodelService,
 ) {
     fun buildResourceTypeToRelationSyncRules() =
         everyResourceInFint { component, resource ->
             resource.relations
-                .filter { it.isListMultiplicity() && it.belongsToDomain(component.domainName) }
-                .map { createRelationSyncRule(component, it, resource.packageName) }
+                .filter { it.isListMultiplicity() && it.belongsToDomain(component.domainName) && it.inverseName != null }
+                .map { targetRelation -> createRelationSyncRule(component, targetRelation) }
                 .takeIf { it.isNotEmpty() }
                 ?.let { rules -> component.toResourceType(resource.name) to rules }
         }.toMap()
@@ -34,16 +32,12 @@ class RelationRuleBuilder(
     private fun createRelationSyncRule(
         component: Component,
         targetRelation: FintRelation,
-        inverseRelationPackageName: String,
     ): RelationSyncRule =
-        createTargetResourceType(component, targetRelation)
-            .let { targetResourceType ->
-                RelationSyncRule(
-                    forwardRelation = targetRelation.name,
-                    inverseRelation = findInverseRelation(targetResourceType, inverseRelationPackageName).name,
-                    targetType = targetResourceType,
-                )
-            }
+        RelationSyncRule(
+            forwardRelation = targetRelation.name,
+            inverseRelation = targetRelation.inverseName,
+            targetType = createTargetResourceType(component, targetRelation),
+        )
 
     private fun Component.toResourceType(resource: String) = ResourceType(domainName, packageName, resource)
 
@@ -61,23 +55,7 @@ class RelationRuleBuilder(
                 .let { (domainName, pkg, resource) -> ResourceType(domainName, pkg, resource) }
         }
 
-    private fun findInverseRelation(
-        targetResourceType: ResourceType,
-        inverseRelationPackageName: String,
-    ): FintRelation =
-        targetResourceType
-            .toMetamodelResource()
-            ?.relations
-            ?.firstInverseRelation(inverseRelationPackageName)
-            ?: error("Could not find resource for $targetResourceType")
-
-    private fun List<FintRelation>.firstInverseRelation(inverseRelationPackageName: String): FintRelation =
-        this.firstOrNull { it.packageName == inverseRelationPackageName }
-            ?: error("Could not find inverse relation of package $inverseRelationPackageName")
-
     private fun FintRelation.isListMultiplicity() = this.multiplicity in setOf(FintMultiplicity.ONE_TO_MANY, FintMultiplicity.NONE_TO_MANY)
-
-    private fun ResourceType.toMetamodelResource(): Resource? = metamodelService.getResource(domainName, packageName, resource)
 
     private fun FintRelation.belongsToDomain(domain: String): Boolean = this.packageName.startsWith("no.fint.model.$domain")
 
