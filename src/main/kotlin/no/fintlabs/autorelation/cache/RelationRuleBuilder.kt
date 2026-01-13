@@ -34,7 +34,7 @@ class RelationRuleBuilder(
         targetRelation: FintRelation,
     ): RelationSyncRule =
         RelationSyncRule(
-            forwardRelation = targetRelation.name,
+            targetRelation = targetRelation.name,
             inverseRelation = targetRelation.inverseName,
             targetType = createTargetResourceType(component, targetRelation),
         )

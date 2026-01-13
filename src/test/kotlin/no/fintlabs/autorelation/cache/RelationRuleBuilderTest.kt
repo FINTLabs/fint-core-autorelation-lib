@@ -60,7 +60,7 @@ class RelationRuleBuilderTest {
 
         with(rule) {
             // Verify we mapped the RELATION names, not the resource names
-            assertEquals(scenario.forwardRelationName, forwardRelation)
+            assertEquals(scenario.forwardRelationName, targetRelation)
             assertEquals(scenario.inverseRelationName, inverseRelation)
 
             // Verify the target TYPE is still correct based on the package

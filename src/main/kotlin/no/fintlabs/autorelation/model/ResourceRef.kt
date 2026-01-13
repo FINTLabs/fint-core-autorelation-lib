@@ -9,7 +9,7 @@ data class ResourceRef(
 ) {
     companion object {
         fun from(resource: FintResource, relationSyncRule: RelationSyncRule): ResourceRef? =
-            getTargetResourceLink(resource, relationSyncRule.forwardRelation)
+            getTargetResourceLink(resource, relationSyncRule.targetRelation)
                 ?.href
                 ?.substringAfterLast("/")
                 ?.let { ResourceRef(relationSyncRule.targetType.resource, it) }
