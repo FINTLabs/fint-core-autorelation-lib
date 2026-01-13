@@ -2,9 +2,9 @@ package no.fintlabs.autorelation.cache
 
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import no.fint.model.FintMultiplicity
 import no.fint.model.FintRelation
-import no.fint.model.resource.FintResource
 import no.fintlabs.autorelation.model.ResourceType
 import no.fintlabs.metamodel.MetamodelService
 import no.fintlabs.metamodel.model.Component
@@ -26,18 +26,12 @@ class RelationRuleBuilderTest {
     @MethodSource("successScenarios")
     fun `should build correct rules for valid combinations`(scenario: TestScenario) {
         // GIVEN
-        val componentName = "${scenario.domain}-${scenario.pkg}"
-
         val sourceResource =
             resource(
                 name = scenario.sourceName,
-                pkg = scenario.sourcePackage,
                 relations =
                     arrayOf(
                         relation(
-                            // DISTINCT NAME CHECK:
-                            // We use a specific relation name (e.g. "contactTeacher")
-                            // to prove we aren't just copying the resource name ("person").
                             name = scenario.forwardRelationName,
                             pkg = scenario.targetPackage,
                             multiplicity = scenario.sourceMultiplicity,
@@ -48,7 +42,7 @@ class RelationRuleBuilderTest {
 
         every { metamodelService.getComponents() } returns
             listOf(
-                Component(componentName, "xml", listOf(sourceResource)),
+                mockComponent(scenario.domain, scenario.pkg, listOf(sourceResource)),
             )
 
         // WHEN
@@ -59,11 +53,8 @@ class RelationRuleBuilderTest {
         val rule = result[expectedKey]?.single() ?: fail("Expected one rule for $expectedKey")
 
         with(rule) {
-            // Verify we mapped the RELATION names, not the resource names
             assertEquals(scenario.forwardRelationName, targetRelation)
             assertEquals(scenario.inverseRelationName, inverseRelation)
-
-            // Verify the target TYPE is still correct based on the package
             assertEquals(scenario.expectedTargetType, targetType)
         }
     }
@@ -72,18 +63,21 @@ class RelationRuleBuilderTest {
     fun `should ignore relation if inverseName is null (Uni-directional)`() {
         val sourceResource =
             resource(
-                "elev",
-                "no.fint.model.utdanning.source.elev",
-                relation(
-                    name = "relatedPerson",
-                    pkg = "no.fint.model.utdanning.target.person",
-                    multiplicity = FintMultiplicity.ONE_TO_MANY,
-                    inverseName = null,
-                ),
+                name = "elev",
+                relations =
+                    arrayOf(
+                        relation(
+                            name = "relatedPerson",
+                            pkg = "no.fint.model.utdanning.target.person",
+                            multiplicity = FintMultiplicity.ONE_TO_MANY,
+                            inverseName = null,
+                        ),
+                    ),
             )
+
         every { metamodelService.getComponents() } returns
             listOf(
-                Component("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
             )
 
         assertTrue(
@@ -96,18 +90,21 @@ class RelationRuleBuilderTest {
     fun `should ignore relation if source multiplicity is 1-1`() {
         val sourceResource =
             resource(
-                "elev",
-                "no.fint.model.utdanning.source.elev",
-                relation(
-                    "relatedPerson",
-                    "no.fint.model.utdanning.target.person",
-                    FintMultiplicity.ONE_TO_ONE,
-                    "studentList",
-                ),
+                name = "elev",
+                relations =
+                    arrayOf(
+                        relation(
+                            "relatedPerson",
+                            "no.fint.model.utdanning.target.person",
+                            FintMultiplicity.ONE_TO_ONE,
+                            "studentList",
+                        ),
+                    ),
             )
+
         every { metamodelService.getComponents() } returns
             listOf(
-                Component("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
             )
 
         assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
@@ -117,13 +114,16 @@ class RelationRuleBuilderTest {
     fun `should ignore relation if different domain`() {
         val sourceResource =
             resource(
-                "elev",
-                "no.fint.model.utdanning.source.elev",
-                relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY, "elev"),
+                name = "elev",
+                relations =
+                    arrayOf(
+                        relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY, "elev"),
+                    ),
             )
+
         every { metamodelService.getComponents() } returns
             listOf(
-                Component("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
             )
 
         assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
@@ -154,7 +154,6 @@ class RelationRuleBuilderTest {
         val pkg: String = "source",
         val sourceName: String = "elev",
         val targetName: String = "person",
-        // Distinct relation names to ensure we aren't confusing them with resource names
         val forwardRelationName: String = "contactPerson",
         val inverseRelationName: String = "studentList",
     ) {
@@ -163,20 +162,23 @@ class RelationRuleBuilderTest {
         override fun toString() = testName
     }
 
+    private fun mockComponent(
+        domain: String,
+        pkg: String,
+        resourcesList: List<Resource>,
+    ): Component =
+        spyk(Component(domain, pkg)) {
+            every { this@spyk.resources } returns resourcesList
+        }
+
     private fun resource(
         name: String,
-        pkg: String,
         vararg relations: FintRelation,
-    ) = Resource(
-        name = name,
-        packageName = pkg,
-        resourceType = FintResource::class.java,
-        isCommon = false,
-        writeable = true,
-        fields = emptySet(),
-        idFields = emptySet(),
-        relations = relations.toList(),
-    )
+    ): Resource =
+        mockk<Resource> {
+            every { this@mockk.name } returns name.lowercase()
+            every { this@mockk.relations } returns relations.toList()
+        }
 
     private fun relation(
         name: String,
