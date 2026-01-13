@@ -32,7 +32,7 @@ repositories {
 val fintVersion = "3.21.11-rc-4"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter:3.5.5")
-    implementation("no.fintlabs:fint-model-core:0.5.0")
+    implementation("no.fintlabs:fint-model-core:0.6.0")
     implementation("no.fintlabs:fint-model-resource:0.5.0")
     implementation("no.fintlabs:fint-core-consumer-metamodel:2.0.0-rc-4")
 
