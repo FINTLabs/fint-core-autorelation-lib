@@ -1,28 +1,65 @@
 package no.fintlabs.autorelation.model
 
 import no.fint.model.resource.FintResource
+import org.slf4j.LoggerFactory
 
+private val logger = LoggerFactory.getLogger("RelationMapping")
+
+/**
+ * Represents a request to modify a relation on a specific resource.
+ *
+ * This class carries all necessary context to locate a target resource within a specific
+ * service (consumer) and apply a relation change (add or remove).
+ *
+ * @property orgId The unique identifier of the organization.
+ * Format is always lowercase with a dot separator (e.g., "fintlabs.no").
+ *
+ * @property targetEntity Metadata defining the target resource's location.
+ * Contains the domainName, packageName, and resourceName used to route this request
+ * to the correct consumer service.
+ *
+ * @property targetId The unique identifier for the specific target resource.
+ * Used to look up the resource (typically from cache) before applying the update.
+ *
+ * @property binding The relation data [RelationBinding] containing the field name and link
+ * involved in this update.
+ *
+ * @property operation The action to perform on the target resource (e.g., ADD or REMOVE the [binding]).
+ */
 data class RelationUpdate(
     val orgId: String,
-    val domainName: String,
-    val packageName: String,
-    val resource: ResourceRef,
-    val relation: RelationRef,
-    val operation: RelationOperation
-) {
-    companion object {
-        fun from(request: RelationRequest, resource: FintResource, relationSyncRule: RelationSyncRule) =
-            ResourceRef.from(resource, relationSyncRule)?.let { resourceRef ->
-                RelationRef.from(resource, relationSyncRule)?.let { relationRef ->
-                    RelationUpdate(
-                        orgId = request.orgId,
-                        domainName = relationSyncRule.targetType.domainName,
-                        packageName = relationSyncRule.targetType.packageName,
-                        resource = resourceRef,
-                        relation = relationRef,
-                        operation = request.operation
-                    )
-                }
-            }
+    val targetEntity: EntityDescriptor,
+    val targetId: String,
+    val binding: RelationBinding,
+    val operation: RelationOperation,
+)
+
+fun RelationSyncRule.toRelationUpdate(
+    event: RelationEvent,
+    resource: FintResource,
+): RelationUpdate? {
+    val targetId = getTargetId(resource) ?: return null
+
+    return RelationUpdate(
+        orgId = event.orgId,
+        targetEntity = targetType,
+        targetId = targetId,
+        binding = toRelationBinding(resource, event.sourceId),
+        operation = event.operation,
+    )
+}
+
+private fun RelationSyncRule.getTargetId(resource: FintResource): String? {
+    val href = resource.links[targetRelation]?.firstOrNull()?.href
+
+    if (href.isNullOrBlank()) {
+        return if (isMandatory) throw MissingMandatoryLinkException(targetRelation) else null
     }
+
+    return href
+        .split("/")
+        .takeLast(2)
+        .takeIf { segments -> segments.size > 1 && segments.all { it.isNotBlank() } }
+        ?.last()
+        ?: throw InvalidLinkException("Invalid link format for relation '$targetRelation': '$href'. Could not extract valid ID segments.")
 }

@@ -26,7 +26,7 @@ class GenerateDocsTest {
         // If MetamodelService needs external properties (urls, etc),
         // ensure they are in src/test/resources/application.properties.
 
-        val rules = ruleBuilder.buildResourceTypeToRelationSyncRules()
+        val rules = ruleBuilder.buildEntityDescriptorToRules()
 
         if (rules.isEmpty()) {
             println("⚠️ WARNING: No rules were found! Is MetamodelService returning data?")

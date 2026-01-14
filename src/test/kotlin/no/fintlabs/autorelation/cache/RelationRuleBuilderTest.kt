@@ -5,7 +5,7 @@ import io.mockk.mockk
 import io.mockk.spyk
 import no.fint.model.FintMultiplicity
 import no.fint.model.FintRelation
-import no.fintlabs.autorelation.model.ResourceType
+import no.fintlabs.autorelation.model.EntityDescriptor
 import no.fintlabs.metamodel.MetamodelService
 import no.fintlabs.metamodel.model.Component
 import no.fintlabs.metamodel.model.Resource
@@ -25,7 +25,6 @@ class RelationRuleBuilderTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("successScenarios")
     fun `should build correct rules for valid combinations`(scenario: TestScenario) {
-        // GIVEN
         val sourceResource =
             resource(
                 name = scenario.sourceName,
@@ -45,11 +44,14 @@ class RelationRuleBuilderTest {
                 mockComponent(scenario.domain, scenario.pkg, listOf(sourceResource)),
             )
 
-        // WHEN
-        val result = ruleBuilder.buildResourceTypeToRelationSyncRules()
+        every { metamodelService.getResource(any(), any(), any()) } returns
+            mockk<Resource> {
+                every { relations } returns emptyList()
+            }
 
-        // THEN
-        val expectedKey = ResourceType(scenario.domain, scenario.pkg, scenario.sourceName)
+        val result = ruleBuilder.buildEntityDescriptorToRules()
+
+        val expectedKey = EntityDescriptor(scenario.domain, scenario.pkg, scenario.sourceName)
         val rule = result[expectedKey]?.single() ?: fail("Expected one rule for $expectedKey")
 
         with(rule) {
@@ -77,11 +79,11 @@ class RelationRuleBuilderTest {
 
         every { metamodelService.getComponents() } returns
             listOf(
-                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning", "vurdering", listOf(sourceResource)),
             )
 
         assertTrue(
-            ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty(),
+            ruleBuilder.buildEntityDescriptorToRules().isEmpty(),
             "Should ignore uni-directional relations",
         )
     }
@@ -104,10 +106,10 @@ class RelationRuleBuilderTest {
 
         every { metamodelService.getComponents() } returns
             listOf(
-                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning", "vurdering", listOf(sourceResource)),
             )
 
-        assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
+        assertTrue(ruleBuilder.buildEntityDescriptorToRules().isEmpty())
     }
 
     @Test
@@ -123,20 +125,18 @@ class RelationRuleBuilderTest {
 
         every { metamodelService.getComponents() } returns
             listOf(
-                mockComponent("utdanning-source", "xml", listOf(sourceResource)),
+                mockComponent("utdanning", "vurdering", listOf(sourceResource)),
             )
 
-        assertTrue(ruleBuilder.buildResourceTypeToRelationSyncRules().isEmpty())
+        assertTrue(ruleBuilder.buildEntityDescriptorToRules().isEmpty())
     }
-
-    // --- Data Providers ---
 
     private fun successScenarios(): List<TestScenario> {
         val standardPkg = "no.fint.model.utdanning.target.person"
         val commonPkg = "no.fint.model.utdanning.person"
 
-        val standardType = ResourceType("utdanning", "target", "person")
-        val commonType = ResourceType("utdanning", "source", "person")
+        val standardType = EntityDescriptor("utdanning", "target", "person")
+        val commonType = EntityDescriptor("utdanning", "source", "person")
 
         return listOf(
             TestScenario("Standard: 1-N", FintMultiplicity.ONE_TO_MANY, standardPkg, standardType),
@@ -149,7 +149,7 @@ class RelationRuleBuilderTest {
         val testName: String,
         val sourceMultiplicity: FintMultiplicity,
         val targetPackage: String,
-        val expectedTargetType: ResourceType,
+        val expectedTargetType: EntityDescriptor,
         val domain: String = "utdanning",
         val pkg: String = "source",
         val sourceName: String = "elev",
@@ -157,8 +157,6 @@ class RelationRuleBuilderTest {
         val forwardRelationName: String = "contactPerson",
         val inverseRelationName: String = "studentList",
     ) {
-        val sourcePackage get() = "no.fint.model.$domain.$pkg.$sourceName"
-
         override fun toString() = testName
     }
 
