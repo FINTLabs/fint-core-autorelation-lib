@@ -21,11 +21,6 @@ class GenerateDocsTest {
 
     @Test
     fun `generate supported relations markdown`() {
-        // NOTE: This will only produce content if 'MetamodelService'
-        // is successfully injected and returns REAL data.
-        // If MetamodelService needs external properties (urls, etc),
-        // ensure they are in src/test/resources/application.properties.
-
         val rules = ruleBuilder.buildEntityDescriptorToRules()
 
         if (rules.isEmpty()) {

@@ -11,9 +11,9 @@ import no.fintlabs.metamodel.model.Component
 import no.fintlabs.metamodel.model.Resource
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.fail
 
@@ -24,7 +24,70 @@ class RelationRuleBuilderTest {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("successScenarios")
-    fun `should build correct rules for valid combinations`(scenario: TestScenario) {
+    fun `should build correct rules for valid inverse multiplicities`(scenario: TestScenario) {
+        configureMocksForScenario(scenario)
+
+        val result = ruleBuilder.buildEntityDescriptorToRules()
+
+        val expectedKey = EntityDescriptor(scenario.domain, scenario.pkg, scenario.sourceName)
+        val rule = result[expectedKey]?.single() ?: fail("Expected one rule for $expectedKey")
+
+        with(rule) {
+            assertEquals(scenario.forwardRelationName, targetRelation)
+            assertEquals(scenario.inverseRelationName, inverseRelation)
+            assertEquals(scenario.expectedTargetType, targetType)
+            assertEquals(
+                scenario.expectedMandatory,
+                isMandatory,
+                "Wrong mandatory flag for ${scenario.inverseMultiplicity}",
+            )
+        }
+    }
+
+    @ParameterizedTest(name = "Should ignore inverse multiplicity: {0}")
+    @EnumSource(value = FintMultiplicity::class, names = ["ONE_TO_MANY", "NONE_TO_MANY"])
+    fun `should ignore relation when inverse relation is a list`(invalidInverseMultiplicity: FintMultiplicity) {
+        val scenario =
+            TestScenario(
+                testName = "Invalid Inverse",
+                sourceMultiplicity = FintMultiplicity.ONE_TO_MANY,
+                targetPackage = "no.fint.model.utdanning.target.person",
+                expectedTargetType = EntityDescriptor("utdanning", "target", "person"),
+                inverseMultiplicity = invalidInverseMultiplicity, // <--- The invalid part
+            )
+
+        configureMocksForScenario(scenario)
+
+        val result = ruleBuilder.buildEntityDescriptorToRules()
+
+        assertTrue(result.isEmpty(), "Expected no rules for inverse multiplicity $invalidInverseMultiplicity")
+    }
+
+    private fun successScenarios(): List<TestScenario> {
+        val standardPkg = "no.fint.model.utdanning.target.person"
+        val standardType = EntityDescriptor("utdanning", "target", "person")
+
+        return listOf(
+            TestScenario(
+                testName = "Inverse: 1-1 (Mandatory)",
+                sourceMultiplicity = FintMultiplicity.ONE_TO_MANY,
+                targetPackage = standardPkg,
+                expectedTargetType = standardType,
+                inverseMultiplicity = FintMultiplicity.ONE_TO_ONE,
+                expectedMandatory = true,
+            ),
+            TestScenario(
+                testName = "Inverse: 0-1 (Optional)",
+                sourceMultiplicity = FintMultiplicity.ONE_TO_MANY,
+                targetPackage = standardPkg,
+                expectedTargetType = standardType,
+                inverseMultiplicity = FintMultiplicity.NONE_TO_ONE,
+                expectedMandatory = false,
+            ),
+        )
+    }
+
+    private fun configureMocksForScenario(scenario: TestScenario) {
         val sourceResource =
             resource(
                 name = scenario.sourceName,
@@ -39,110 +102,28 @@ class RelationRuleBuilderTest {
                     ),
             )
 
+        val inverseRelationMock =
+            relation(
+                name = scenario.inverseRelationName,
+                pkg = "any.package",
+                multiplicity = scenario.inverseMultiplicity,
+            )
+
         every { metamodelService.getComponents() } returns
             listOf(
                 mockComponent(scenario.domain, scenario.pkg, listOf(sourceResource)),
             )
 
-        every { metamodelService.getResource(any(), any(), any()) } returns
+        every {
+            metamodelService.getResource(
+                scenario.expectedTargetType.domainName,
+                scenario.expectedTargetType.packageName,
+                scenario.expectedTargetType.resourceName,
+            )
+        } returns
             mockk<Resource> {
-                every { relations } returns emptyList()
+                every { relations } returns listOf(inverseRelationMock)
             }
-
-        val result = ruleBuilder.buildEntityDescriptorToRules()
-
-        val expectedKey = EntityDescriptor(scenario.domain, scenario.pkg, scenario.sourceName)
-        val rule = result[expectedKey]?.single() ?: fail("Expected one rule for $expectedKey")
-
-        with(rule) {
-            assertEquals(scenario.forwardRelationName, targetRelation)
-            assertEquals(scenario.inverseRelationName, inverseRelation)
-            assertEquals(scenario.expectedTargetType, targetType)
-        }
-    }
-
-    @Test
-    fun `should ignore relation if inverseName is null (Uni-directional)`() {
-        val sourceResource =
-            resource(
-                name = "elev",
-                relations =
-                    arrayOf(
-                        relation(
-                            name = "relatedPerson",
-                            pkg = "no.fint.model.utdanning.target.person",
-                            multiplicity = FintMultiplicity.ONE_TO_MANY,
-                            inverseName = null,
-                        ),
-                    ),
-            )
-
-        every { metamodelService.getComponents() } returns
-            listOf(
-                mockComponent("utdanning", "vurdering", listOf(sourceResource)),
-            )
-
-        assertTrue(
-            ruleBuilder.buildEntityDescriptorToRules().isEmpty(),
-            "Should ignore uni-directional relations",
-        )
-    }
-
-    @Test
-    fun `should ignore relation if source multiplicity is 1-1`() {
-        val sourceResource =
-            resource(
-                name = "elev",
-                relations =
-                    arrayOf(
-                        relation(
-                            "relatedPerson",
-                            "no.fint.model.utdanning.target.person",
-                            FintMultiplicity.ONE_TO_ONE,
-                            "studentList",
-                        ),
-                    ),
-            )
-
-        every { metamodelService.getComponents() } returns
-            listOf(
-                mockComponent("utdanning", "vurdering", listOf(sourceResource)),
-            )
-
-        assertTrue(ruleBuilder.buildEntityDescriptorToRules().isEmpty())
-    }
-
-    @Test
-    fun `should ignore relation if different domain`() {
-        val sourceResource =
-            resource(
-                name = "elev",
-                relations =
-                    arrayOf(
-                        relation("ansatt", "no.fint.model.administrasjon.ansatt", FintMultiplicity.ONE_TO_MANY, "elev"),
-                    ),
-            )
-
-        every { metamodelService.getComponents() } returns
-            listOf(
-                mockComponent("utdanning", "vurdering", listOf(sourceResource)),
-            )
-
-        assertTrue(ruleBuilder.buildEntityDescriptorToRules().isEmpty())
-    }
-
-    private fun successScenarios(): List<TestScenario> {
-        val standardPkg = "no.fint.model.utdanning.target.person"
-        val commonPkg = "no.fint.model.utdanning.person"
-
-        val standardType = EntityDescriptor("utdanning", "target", "person")
-        val commonType = EntityDescriptor("utdanning", "source", "person")
-
-        return listOf(
-            TestScenario("Standard: 1-N", FintMultiplicity.ONE_TO_MANY, standardPkg, standardType),
-            TestScenario("Standard: 0-N", FintMultiplicity.NONE_TO_MANY, standardPkg, standardType),
-            TestScenario("Common Resource", FintMultiplicity.ONE_TO_MANY, commonPkg, commonType),
-        )
     }
 
     data class TestScenario(
@@ -150,10 +131,11 @@ class RelationRuleBuilderTest {
         val sourceMultiplicity: FintMultiplicity,
         val targetPackage: String,
         val expectedTargetType: EntityDescriptor,
+        val inverseMultiplicity: FintMultiplicity = FintMultiplicity.ONE_TO_ONE,
+        val expectedMandatory: Boolean = true,
         val domain: String = "utdanning",
         val pkg: String = "source",
         val sourceName: String = "elev",
-        val targetName: String = "person",
         val forwardRelationName: String = "contactPerson",
         val inverseRelationName: String = "studentList",
     ) {
@@ -164,10 +146,7 @@ class RelationRuleBuilderTest {
         domain: String,
         pkg: String,
         resourcesList: List<Resource>,
-    ): Component =
-        spyk(Component(domain, pkg)) {
-            every { this@spyk.resources } returns resourcesList
-        }
+    ): Component = spyk(Component(domain, pkg)) { every { this@spyk.resources } returns resourcesList }
 
     private fun resource(
         name: String,
